@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "gpu-telemetry.fullname" . }}-collector
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: collector
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: collector
+    spec:
+      containers:
+      - name: collector
+        image: "{{ .Values.global.imagePrefix }}/collector:latest"
+        imagePullPolicy: IfNotPresent

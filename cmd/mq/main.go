@@ -1,6 +1,3 @@
 package main
-import "log"
-func main() {
-	log.Println("mq starting")
-	select {}
-}
+import ("log"; "time")
+func main() { log.Println("mq: starting"); for { time.Sleep(10 * time.Second) } }

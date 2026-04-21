@@ -1,23 +1,15 @@
 global:
-  imagePrefix: ghcr.io/agupta49
-
+  imagePrefix: localhost
 streamer:
-  replicaCount: 2
+  enabled: true
 collector:
-  replicaCount: 2
+  enabled: true
 mq:
-  replicaCount: 1
-apiGateway:
-  replicaCount: 1
+  enabled: true
+api-gateway:
+  enabled: true
   service:
     type: NodePort
     nodePort: 30080
-postgres:
+postgresql:
   enabled: true
-  auth:
-    username: postgres
-    postgresPassword: postgres
-    database: telemetry
-  primary:
-    initdb:
-      scriptsConfigMap: gpu-telemetry-init-db

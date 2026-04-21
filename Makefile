@@ -5,7 +5,6 @@ CLUSTER_NAME=gpu-telemetry
 
 .PHONY: test cover cover-html swagger build-binaries docker-build kind-create kind-delete kind-load helm-install helm-uninstall lint clean logs-streamer
 
-# Only test internal packages for coverage, exclude cmd and generated pb
 PKG_LIST := $(shell go list ./... | grep -v /cmd/ | grep -v /pkg/pb)
 
 test:
@@ -28,7 +27,7 @@ build-binaries:
 	go build -o bin/mq ./cmd/mq
 	go build -o bin/api-gateway ./cmd/api-gateway
 
-docker-build:
+docker-build: # For speed: DOCKER_BUILDKIT=1 make docker-build -j4
 	docker build -f deploy/docker/Dockerfile.streamer -t $(IMG_PREFIX)/streamer:latest .
 	docker build -f deploy/docker/Dockerfile.collector -t $(IMG_PREFIX)/collector:latest .
 	docker build -f deploy/docker/Dockerfile.mq -t $(IMG_PREFIX)/mq:latest .
