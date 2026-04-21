@@ -3,13 +3,8 @@ package main
 import (
 	"net/http"
 	"github.com/gin-gonic/gin"
-	_ "github.com/agupta49/gpu-telemetry-pipeline/api"
 )
 
-// @title GPU Telemetry API
-// @version 1.0
-// @description REST API for GPU telemetry
-// @BasePath /api/v1
 func main() {
 	r := gin.Default()
 	r.GET("/healthz", func(c *gin.Context) { c.String(200, "ok") })
@@ -27,5 +22,5 @@ func ListGPUs(c *gin.Context) {
 }
 
 func GetTelemetry(c *gin.Context) {
-	c.JSON(http.StatusOK, []interface{})
+	c.JSON(http.StatusOK, []interface{}{})
 }

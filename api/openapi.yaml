@@ -1,0 +1,11 @@
+openapi: 3.0.3
+info:
+  title: GPU Telemetry API
+  version: 1.0.0
+paths:
+  /api/v1/gpus:
+    get:
+      summary: List GPUs
+      responses:
+        '200':
+          description: OK
