@@ -5,7 +5,7 @@ NAMESPACE=gpu-telemetry
 .PHONY: test cover cover-html swagger build-binaries docker-build kind-load helm-install helm-uninstall lint clean
 
 test:
-	go test ./... -race -coverprofile=coverage.out -covermode=atomic
+	go test ./... -coverprofile=coverage.out -covermode=atomic
 
 cover: test
 	@go tool cover -func=coverage.out | grep total | awk '{print "Total coverage: " $$3}'

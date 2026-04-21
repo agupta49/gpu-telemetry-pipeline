@@ -8,10 +8,9 @@ import (
 	"flag"
 	"log"
 	"os"
-	"strconv"
 	"time"
 
-	"github.com/agupta49/gpu-telemetry-pipeline/internal/telemetry"
+	streamer "github.com/agupta49/gpu-telemetry-pipeline/internal/streamer"
 	"github.com/agupta49/gpu-telemetry-pipeline/pkg/pb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -59,8 +58,7 @@ func streamFile(path string, client pb.MessageQueueClient) error {
 		if err != nil {
 			break
 		}
-		tp := parseCSV(rec)
-		tp.Timestamp = time.Now()
+		tp := streamer.ParseCSV(rec)
 		b, _ := json.Marshal(tp)
 		if err := stream.Send(&pb.Message{Data: b, TimestampUnixNano: time.Now().UnixNano()}); err != nil {
 			return err
@@ -69,16 +67,4 @@ func streamFile(path string, client pb.MessageQueueClient) error {
 	}
 	_, err = stream.CloseAndRecv()
 	return err
-}
-
-func parseCSV(rec []string) telemetry.TelemetryPoint {
-	val, _ := strconv.ParseFloat(rec[10], 64)
-	return telemetry.TelemetryPoint{
-		MetricName: rec[1],
-		GPUID:      rec[4],
-		Hostname:   rec[6],
-		ModelName:  rec[5],
-		Device:     rec[3],
-		Value:      val,
-	}
 }

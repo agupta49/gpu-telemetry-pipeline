@@ -9,3 +9,15 @@ paths:
       responses:
         '200':
           description: OK
+  /api/v1/gpus/{id}/telemetry:
+    get:
+      summary: Get telemetry
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
