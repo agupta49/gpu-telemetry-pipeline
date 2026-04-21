@@ -27,7 +27,7 @@ build-binaries:
 	go build -o bin/mq ./cmd/mq
 	go build -o bin/api-gateway ./cmd/api-gateway
 
-docker-build: # For speed: DOCKER_BUILDKIT=1 make docker-build -j4
+docker-build: # For speed: DOCKER_DEFAULT_PLATFORM=linux/amd64 DOCKER_BUILDKIT=1 make docker-build -j4
 	docker build -f deploy/docker/Dockerfile.streamer -t $(IMG_PREFIX)/streamer:latest .
 	docker build -f deploy/docker/Dockerfile.collector -t $(IMG_PREFIX)/collector:latest .
 	docker build -f deploy/docker/Dockerfile.mq -t $(IMG_PREFIX)/mq:latest .

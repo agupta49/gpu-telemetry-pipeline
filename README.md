@@ -32,7 +32,7 @@ make cover
 
 # Deploy to kind
 make kind-create
-DOCKER_BUILDKIT=1 make docker-build -j4 kind-load
+DOCKER_DEFAULT_PLATFORM=linux/amd64 DOCKER_BUILDKIT=1 make docker-build -j4 kind-load
 make helm-install
 
 # Verify
@@ -45,9 +45,29 @@ curl http://localhost:30080/api/v1/gpus
 | --- | --- |
 | `make cover` | Run tests, fail if <80% coverage |
 | `make kind-create` | Create kind cluster |
-| `make docker-build kind-load` | Build and load images. Use `DOCKER_BUILDKIT=1 -j4` for speed |
+| `make docker-build kind-load` | Build and load images. Use `DOCKER_DEFAULT_PLATFORM=linux/amd64 DOCKER_BUILDKIT=1 -j4` for speed |
 | `make helm-install` | Deploy Helm chart |
 | `make logs-streamer` | Tail streamer logs |
 
 ### **Coverage**
 `make cover` only tests `internal/*` packages. `cmd/*` and `pkg/pb` excluded as wrappers/generated.
+
+### **Troubleshooting**
+
+**Docker build stuck at `go build` for hours**: This happens if Docker tries to emulate ARM on x86 via QEMU. Fix:
+
+1. **Kill the stuck build**: 
+   ```bash
+   docker buildx prune -a -f
+   docker system prune -a
+   ```
+2. **Force native platform**: 
+   ```bash
+   DOCKER_DEFAULT_PLATFORM=linux/amd64 DOCKER_BUILDKIT=1 make docker-build -j4
+   ```
+3. **Check your arch**: `uname -m`. If `x86_64`, the `--platform=linux/amd64` flag in Dockerfile prevents emulation.
+4. **Test native build**: `go build ./cmd/streamer` should take <10s. If slow, your machine is the issue.
+
+**Docker permission denied**: Run `newgrp docker` or logout/login after `usermod -aG docker $USER`
+
+**Kubernetes cluster unreachable**: Run `make kind-create` to create the cluster
