@@ -1,8 +1,9 @@
 APP_NAME=gpu-telemetry
-IMG_PREFIX ?= ghcr.io/agupta49
+IMG_PREFIX ?= localhost
 NAMESPACE=gpu-telemetry
+CLUSTER_NAME=gpu-telemetry
 
-.PHONY: test cover cover-html swagger build-binaries docker-build kind-load helm-install helm-uninstall lint clean
+.PHONY: test cover cover-html swagger build-binaries docker-build kind-create kind-delete kind-load helm-install helm-uninstall lint clean logs-streamer
 
 # Only test internal packages for coverage, exclude cmd and generated pb
 PKG_LIST := $(shell go list ./... | grep -v /cmd/ | grep -v /pkg/pb)
@@ -33,11 +34,18 @@ docker-build:
 	docker build -f deploy/docker/Dockerfile.mq -t $(IMG_PREFIX)/mq:latest .
 	docker build -f deploy/docker/Dockerfile.api-gateway -t $(IMG_PREFIX)/api-gateway:latest
 
+kind-create:
+	kind create cluster --name $(CLUSTER_NAME)
+	kubectl cluster-info --context kind-$(CLUSTER_NAME)
+
+kind-delete:
+	kind delete cluster --name $(CLUSTER_NAME)
+
 kind-load:
-	kind load docker-image $(IMG_PREFIX)/streamer:latest --name gpu-telemetry
-	kind load docker-image $(IMG_PREFIX)/collector:latest --name gpu-telemetry
-	kind load docker-image $(IMG_PREFIX)/mq:latest --name gpu-telemetry
-	kind load docker-image $(IMG_PREFIX)/api-gateway:latest --name gpu-telemetry
+	kind load docker-image $(IMG_PREFIX)/streamer:latest --name $(CLUSTER_NAME)
+	kind load docker-image $(IMG_PREFIX)/collector:latest --name $(CLUSTER_NAME)
+	kind load docker-image $(IMG_PREFIX)/mq:latest --name $(CLUSTER_NAME)
+	kind load docker-image $(IMG_PREFIX)/api-gateway:latest --name $(CLUSTER_NAME)
 
 helm-install:
 	helm upgrade --install $(APP_NAME) ./charts/gpu-telemetry \
@@ -48,6 +56,9 @@ helm-install:
 helm-uninstall:
 	helm uninstall $(APP_NAME) -n $(NAMESPACE) || true
 	kubectl delete ns $(NAMESPACE) || true
+
+logs-streamer:
+	kubectl logs -n $(NAMESPACE) -l app.kubernetes.io/name=streamer --tail=50 -f
 
 clean:
 	rm -rf bin/ coverage.out coverage.html
