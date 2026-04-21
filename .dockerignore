@@ -9,3 +9,9 @@ scripts/
 .idea/
 .vscode/
 *.zip
+go.mod
+go.sum
+internal/
+cmd/
+pkg/
+api/

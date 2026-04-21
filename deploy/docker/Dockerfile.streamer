@@ -1,14 +1,6 @@
-# Force platform to avoid QEMU emulation hang
-FROM --platform=linux/amd64 golang:1.22-alpine AS build
-WORKDIR /app
-COPY go.mod go.sum ./
-RUN go mod download
-COPY . .
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o /bin/streamer ./cmd/streamer
-
-FROM --platform=linux/amd64 alpine:3.20
+FROM alpine:3.20
 RUN apk --no-cache add ca-certificates
-COPY --from=build /bin/streamer /streamer
+COPY bin/streamer /streamer
 RUN mkdir -p /data
 COPY data/ /data/
 ENTRYPOINT ["/streamer", "-csv", "/data/dcgm_metrics_20250718_134233.csv"]

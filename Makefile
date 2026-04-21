@@ -3,7 +3,7 @@ IMG_PREFIX ?= localhost
 NAMESPACE=gpu-telemetry
 CLUSTER_NAME=gpu-telemetry
 
-.PHONY: test cover cover-html swagger build-binaries docker-build kind-create kind-delete kind-load helm-install helm-uninstall lint clean logs-streamer
+.PHONY: test cover cover-html swagger build-binaries docker-build kind-create kind-delete kind-load helm-install helm-uninstall lint clean logs-streamer build-all
 
 PKG_LIST := $(shell go list ./... | grep -v /cmd/ | grep -v /pkg/pb)
 
@@ -22,16 +22,21 @@ swagger:
 	swag init -g cmd/api-gateway/main.go -o api --parseDependency --parseInternal
 
 build-binaries:
-	go build -o bin/streamer ./cmd/streamer
-	go build -o bin/collector ./cmd/collector
-	go build -o bin/mq ./cmd/mq
-	go build -o bin/api-gateway ./cmd/api-gateway
+	@echo "Building binaries on host - this uses Go cache and is fast"
+	@mkdir -p bin
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o bin/streamer ./cmd/streamer
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o bin/collector ./cmd/collector
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o bin/mq ./cmd/mq
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o bin/api-gateway ./cmd/api-gateway
+	@echo "Binaries built: ls -lh bin/"
 
-docker-build: # For speed: DOCKER_DEFAULT_PLATFORM=linux/amd64 DOCKER_BUILDKIT=1 make docker-build -j4
+docker-build: # Builds are instant - just copies pre-built binaries
 	docker build -f deploy/docker/Dockerfile.streamer -t $(IMG_PREFIX)/streamer:latest .
 	docker build -f deploy/docker/Dockerfile.collector -t $(IMG_PREFIX)/collector:latest .
 	docker build -f deploy/docker/Dockerfile.mq -t $(IMG_PREFIX)/mq:latest .
 	docker build -f deploy/docker/Dockerfile.api-gateway -t $(IMG_PREFIX)/api-gateway:latest
+
+build-all: build-binaries docker-build
 
 kind-create:
 	kind create cluster --name $(CLUSTER_NAME)
