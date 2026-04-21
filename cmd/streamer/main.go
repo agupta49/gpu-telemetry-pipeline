@@ -16,12 +16,13 @@ import (
 )
 
 func main() {
-	csvPath := flag.String("csv", "", "path to DCGM csv")
+	csvPath := flag.String("csv", "data/dcgm_metrics_20250718_134233.csv", "path to DCGM csv")
+
 	mqAddr := flag.String("mq", "localhost:50051", "MQ address")
 	flag.Parse()
 
 	log.Println("streamer: starting")
-	
+
 	conn, err := grpc.Dial(*mqAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
@@ -53,14 +54,18 @@ func streamFile(path string, client pb.TelemetryQueueClient) {
 	lineNum := 0
 	for scanner.Scan() {
 		lineNum++
-		if lineNum == 1 { continue } // skip header
+		if lineNum == 1 {
+			continue
+		} // skip header
 		fields := strings.Split(scanner.Text(), ",")
-		if len(fields) < 3 { continue }
-		
+		if len(fields) < 3 {
+			continue
+		}
+
 		gpuID := fields[0]
 		metricName := fields[1]
 		val, _ := strconv.ParseFloat(fields[2], 64)
-		
+
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		_, err := client.Publish(ctx, &pb.PublishRequest{
 			Point: &pb.TelemetryPoint{
