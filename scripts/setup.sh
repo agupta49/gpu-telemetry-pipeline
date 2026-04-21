@@ -7,6 +7,5 @@ command -v kubectl >/dev/null 2>&1 || { echo "kubectl not found"; exit 1; }
 command -v helm >/dev/null 2>&1 || { echo "helm not found"; exit 1; }
 command -v kind >/dev/null 2>&1 || { echo "kind not found"; exit 1; }
 echo "✓ All prerequisites found"
-sudo systemctl start docker && sudo systemctl enable docker
 go mod tidy
 echo "Ready. Run: make cover && make kind-create && DOCKER_BUILDKIT=1 make docker-build -j4 kind-load && make helm-install"

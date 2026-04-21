@@ -3,7 +3,6 @@
 Elastic, scalable telemetry pipeline for AI clusters built in Golang. Ingests DCGM CSV streams, routes via custom gRPC message queue, persists to Postgres/TimescaleDB, and exposes REST APIs.
 
 ### **Prerequisites**
-
 **Option 1: Auto-install script for Amazon Linux 2023 / RHEL**
 ```bash
 bash scripts/install-prereqs.sh
