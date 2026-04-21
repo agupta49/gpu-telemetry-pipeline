@@ -3,6 +3,13 @@
 Elastic, scalable telemetry pipeline for AI clusters built in Golang. Ingests DCGM CSV streams, routes via custom gRPC message queue, persists to Postgres/TimescaleDB, and exposes REST APIs.
 
 ### **Prerequisites**
+
+**Option 1: Auto-install script for Amazon Linux 2023 / RHEL**
+```bash
+bash scripts/install-prereqs.sh
+```
+
+**Option 2: Manual install**
 1. **Go 1.22+**: `sudo dnf install -y golang`
 2. **Docker**: `sudo dnf install -y docker && sudo systemctl start docker && sudo systemctl enable docker`
 3. **kubectl**: `curl -LO https://dl.k8s.io/release/v1.30.0/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/`
