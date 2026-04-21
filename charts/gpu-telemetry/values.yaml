@@ -13,3 +13,7 @@ api-gateway:
     nodePort: 30080
 postgresql:
   enabled: true
+  auth:
+    username: postgres
+    password: postgres
+    database: telemetry

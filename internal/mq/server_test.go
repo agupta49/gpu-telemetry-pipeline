@@ -1,3 +1,10 @@
 package mq
+
 import "testing"
-func TestNew(t *testing.T) { if New() != 1 { t.Fatal() } }
+
+func TestNewServer(t *testing.T) {
+	s := NewServer()
+	if s == nil {
+		t.Fatal("nil server")
+	}
+}

@@ -1,0 +1,27 @@
+syntax = "proto3";
+package pb;
+option go_package = "github.com/agupta49/gpu-telemetry-pipeline/pkg/pb";
+
+message TelemetryPoint {
+  string gpu_id = 1;
+  string hostname = 2;
+  string uuid = 3;
+  int64 timestamp = 4;
+  string metric_name = 5;
+  double value = 6;
+  map<string, string> labels = 7;
+}
+
+message PublishRequest {
+  TelemetryPoint point = 1;
+}
+
+message PublishResponse {
+  bool success = 1;
+  string error = 2;
+}
+
+service TelemetryQueue {
+  rpc Publish(PublishRequest) returns (PublishResponse);
+  rpc Subscribe(stream PublishRequest) returns (stream PublishRequest);
+}

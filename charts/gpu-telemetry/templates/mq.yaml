@@ -17,3 +17,15 @@ spec:
       - name: mq
         image: "{{ .Values.global.imagePrefix }}/mq:latest"
         imagePullPolicy: IfNotPresent
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "gpu-telemetry.fullname" . }}-mq
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app.kubernetes.io/name: mq
+  ports:
+  - port: 50051
+    targetPort: 50051

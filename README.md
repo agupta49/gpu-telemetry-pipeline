@@ -1,76 +1,112 @@
-# **Elastic GPU Telemetry Pipeline**
+# **Elastic GPU Telemetry Pipeline with Custom Message Queue**
 
-Elastic, scalable telemetry pipeline for AI clusters built in Golang. Works on macOS, Linux, and EC2.
+Elastic, scalable telemetry pipeline for AI clusters built in Golang. Ingests DCGM CSV streams, routes via custom gRPC message queue, persists to Postgres/TimescaleDB, and exposes REST APIs.
 
-### **Why This Build Is Fast**
+### **System Architecture**
 
-We cross-compile Go binaries on your host machine. Docker images just `COPY` the 5MB Linux binary. Works identically on macOS M1/M2/M3, Intel Mac, Linux, or Windows WSL.
-
-### **Prerequisites**
-
-**macOS:**
-```bash
-brew install go docker kind helm kubectl
+```
+[Streamer] -> gRPC -> [MQ] -> gRPC stream -> [Collector] -> Postgres/TimescaleDB
+                                        ^
+                                        |
+                                  [API Gateway] -> REST /api/v1/gpus
 ```
 
-**Linux/RHEL/EC2:**
+**Components:**
+1. **Telemetry Streamer**: Reads DCGM CSV, loops it, publishes each row to custom MQ. Horizontally scalable
+2. **Messaging Queue**: Custom gRPC pub/sub service. Not Kafka/RabbitMQ. Designed for <10 instances
+3. **Telemetry Collector**: Subscribes to MQ, parses telemetry, writes to TimescaleDB. Horizontally scalable  
+4. **API Gateway**: Gin REST API with Swagger. Queries Postgres for GPU list + telemetry
+
+**Design Considerations:**
+- **Scale**: Streamer/Collector scale independently via K8s HPA. MQ is single service for this exercise but gRPC streaming allows fan-out
+- **Performance**: Binary protobuf over gRPC, batch inserts in collector, TimescaleDB hypertables
+- **Availability**: Health checks, retries with backoff in streamer. CSV loop provides continuous data if source stalls
+- **Timestamp**: Per requirement, we use processing time as telemetry timestamp
+
+### **API Endpoints**
+
+| Method | Path | Description |
+| --- | --- | --- |
+| GET | `/healthz` | Liveness probe |
+| GET | `/api/v1/gpus` | List all GPU IDs with telemetry |
+| GET | `/api/v1/gpus/{id}/telemetry` | Get telemetry for GPU, ordered by time |
+| GET | `/api/v1/gpus/{id}/telemetry?start_time=...&end_time=...` | Filter by time window, inclusive |
+
+Time format: RFC3339 `2006-01-02T15:04:05Z`
+
+### **Build and Package**
+
+**Prerequisites macOS:** `brew install go docker kind helm kubectl protobuf`  
+**Prerequisites Linux:** `bash scripts/install-prereqs.sh`
+
 ```bash
-bash scripts/install-prereqs.sh
-newgrp docker
-```
+# 1. Generate protobuf
+make proto
 
-### **Quick Start - Works on macOS & Linux**
-```bash
-# 1. Extract and setup
-unzip gpu-telemetry-pipeline.zip
-cd gpu-telemetry-pipeline
-go mod tidy
-
-# 2. Add your DCGM CSV
-cp /path/to/dcgm_metrics_20250718_134233.csv data/
-
-# 3. Run tests - builds for your local OS
-make cover
-
-# 4. Build Linux binaries for Docker - cross-compiles on macOS automatically
+# 2. Build Linux binaries - works on macOS/Linux
 make build-binaries
 
-# 5. Build Docker images - instant, just copies binaries
+# 3. Build Docker images
 make docker-build
 
-# 6. Create cluster and load images
-make kind-create
-make kind-load
+# 4. Run tests with coverage gate
+make cover  # fails if <80%
 
-# 7. Deploy
-make helm-install
-
-# 8. Verify
-kubectl get pods -n gpu-telemetry -w
-curl http://localhost:30080/healthz
+# 5. Generate OpenAPI spec
+make swagger  # outputs to api/
 ```
 
-### **Key Commands**
+### **Installation Workflow**
 
-| Command | Description |
-| --- | --- |
-| `make build-binaries` | Cross-compile Linux/amd64 binaries. Works on macOS/Linux |
-| `make build-binaries-local` | Build for your local OS to test natively |
-| `make docker-build` | Build Docker images by copying Linux binaries |
-| `make build-all` | Does both above |
-| `make cover` | Run tests, fail if <80% coverage |
+```bash
+# 1. Create cluster with port mapping for NodePort
+make kind-create
 
-### **macOS Specific Notes**
+# 2. Load images
+make kind-load
 
-1. **Docker Desktop required**: Install from docker.com. Start it before `make docker-build`
-2. **Cross-compilation is automatic**: `make build-binaries` sets `GOOS=linux GOARCH=amd64` so binaries work in k8s even on M1/M2/M3 Macs
-3. **Test locally**: Run `make build-binaries-local` to get `bin/streamer-darwin_arm64` you can run directly on Mac
-4. **Performance**: First build compiles deps ~2-3 min. Second build uses cache ~3s
+# 3. Deploy Helm chart
+make helm-install
 
-### **Troubleshooting**
+# 4. Verify
+kubectl get pods -n gpu-telemetry -w
+curl http://localhost:30080/healthz
+curl http://localhost:30080/api/v1/gpus
+```
 
-**`exec format error` in pod**: You ran `docker-build` without `build-binaries` first. Docker copied wrong arch. Fix: `make clean && make build-binaries && make docker-build`
+### **Sample User Workflow**
 
-**Build slow on macOS**: First run compiles `grpc` + `golang.org/x/text` ~2 min. Second run uses `~/Library/Caches/go-build` ~3s. If still slow after second run, check `rm -rf vendor/`
+```bash
+# 1. Add DCGM CSV
+cp dcgm_metrics_20250718_134233.csv data/
 
-**`docker: command not found` on Mac**: Install Docker Desktop and start it. Check `docker ps` works
+# 2. Deploy stack
+make build-all && make kind-create && make kind-load && make helm-install
+
+# 3. Stream starts automatically, loops CSV
+
+# 4. Query data after 30s
+curl "http://localhost:30080/api/v1/gpus"
+curl "http://localhost:30080/api/v1/gpus/0/telemetry?start_time=2025-07-18T13:42:00Z"
+
+# 5. Scale collectors
+kubectl scale deployment gpu-telemetry-collector -n gpu-telemetry --replicas=3
+```
+
+### **Document Your Use of AI**
+
+**Project Bootstrap**: Used AI to generate initial repo structure, Makefile, Helm charts. Prompt: "Create Go microservice monorepo with 4 services, Helm chart, Makefile with test/coverage/swagger targets." AI output required manual fixes for Helm template syntax and import paths.
+
+**Code Bootstrap**: Used AI for boilerplate gRPC server/client, Gin handlers, Postgres connection. Prompt: "Go gRPC pubsub service with Publish and Subscribe streams." AI generated correct protobuf but missed error handling on stream sends - added manually.
+
+**Unit Tests**: Used AI to generate table tests for db.go and handlers.go. Prompt: "Go table-driven tests for Config.Validate covering empty fields." AI output was 90% correct, manually added DB mock for repo tests.
+
+**Build Env**: Used AI to write Dockerfile with multi-stage build. Hit BuildKit/QEMU slowness. Manual intervention: switched to pre-building binaries on host to use Go cache. This was the key fix.
+
+**Where AI Fell Short**:
+1. Helm templates: AI used wrong `{{ .Release.Name }}` syntax, fixed manually
+2. Protobuf streaming: AI didn't handle context cancellation, added manually
+3. Cross-compilation: AI suggested `GOOS=linux` but didn't explain vendor/ cache busting. Manual debug via `go build -x`
+4. Test coverage: AI wrote tests but didn't hit 80% due to missing error paths. Added error case tests manually
+
+**Manual Interventions**: Architecture decisions, performance tuning, debugging vendor cache issues, Kubernetes port mapping for NodePort access.

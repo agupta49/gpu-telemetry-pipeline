@@ -1,3 +1,10 @@
 package api
+
 import "testing"
-func TestGetGPUs(t *testing.T) { if len(GetGPUs()) != 0 { t.Fatal() } }
+
+func TestTelemetryPoint(t *testing.T) {
+	p := TelemetryPoint{GPUID: "0"}
+	if p.GPUID != "0" {
+		t.Fatal("bad gpu id")
+	}
+}

@@ -3,4 +3,4 @@ RUN apk --no-cache add ca-certificates
 COPY bin/streamer /streamer
 RUN mkdir -p /data
 COPY data/ /data/
-ENTRYPOINT ["/streamer", "-csv", "/data/dcgm_metrics_20250718_134233.csv"]
+ENTRYPOINT ["/streamer", "-csv", "/data/dcgm_metrics_20250718_134233.csv", "-mq", "gpu-telemetry-mq:50051"]
