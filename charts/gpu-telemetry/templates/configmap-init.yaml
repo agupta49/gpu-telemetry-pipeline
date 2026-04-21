@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gpu-telemetry-init-db
+data:
+  init.sql: |
+    CREATE EXTENSION IF NOT EXISTS timescaledb;
+    CREATE TABLE IF NOT EXISTS telemetry (
+      time TIMESTAMPTZ NOT NULL,
+      gpu_id UUID NOT NULL,
+      hostname TEXT,
+      metric_name TEXT,
+      device TEXT,
+      model_name TEXT,
+      value DOUBLE PRECISION
+    );
+    SELECT create_hypertable('telemetry', 'time', if_not_exists => TRUE);
+    CREATE INDEX IF NOT EXISTS idx_telemetry_gpu_time ON telemetry (gpu_id, time DESC);
+    CREATE INDEX IF NOT EXISTS idx_telemetry_time ON telemetry (time DESC);

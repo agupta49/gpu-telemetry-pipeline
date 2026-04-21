@@ -1,0 +1,23 @@
+syntax = "proto3";
+package pb;
+option go_package = "github.com/agupta49/gpu-telemetry-pipeline/pkg/pb";
+
+message Message {
+  bytes data = 1;
+  int64 timestamp_unix_nano = 2;
+}
+
+message SubscribeRequest {
+  string topic = 1;
+  string consumer_group = 2;
+}
+
+service MessageQueue {
+  rpc Publish(stream Message) returns (PublishResponse);
+  rpc Subscribe(SubscribeRequest) returns (stream Message);
+  rpc Health(HealthRequest) returns (HealthResponse);
+}
+
+message PublishResponse { bool ok = 1; }
+message HealthRequest {}
+message HealthResponse { bool ready = 1; }

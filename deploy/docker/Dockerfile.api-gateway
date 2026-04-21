@@ -1,0 +1,8 @@
+FROM golang:1.22-alpine AS build
+WORKDIR /app
+COPY . .
+RUN go build -o /bin/api-gateway ./cmd/api-gateway
+
+FROM alpine:3.20
+COPY --from=build /bin/api-gateway /api-gateway
+ENTRYPOINT ["/api-gateway"]
