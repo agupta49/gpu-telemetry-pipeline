@@ -22,3 +22,6 @@ Postgres + TimescaleDB installed automatically via Helm. ConfigMap `gpu-telemetr
 curl http://localhost:8080/api/v1/gpus
 make cover # must show >80%
 ```
+
+### **Coverage**
+Run `make cover` to test only internal packages. `cmd/*` and `pkg/pb` are excluded from coverage as they are wrappers or generated code.

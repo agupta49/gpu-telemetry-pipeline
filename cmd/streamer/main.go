@@ -58,6 +58,9 @@ func streamFile(path string, client pb.MessageQueueClient) error {
 		if err != nil {
 			break
 		}
+		if !streamer.ValidateRecord(rec) {
+			continue
+		}
 		tp := streamer.ParseCSV(rec)
 		b, _ := json.Marshal(tp)
 		if err := stream.Send(&pb.Message{Data: b, TimestampUnixNano: time.Now().UnixNano()}); err != nil {

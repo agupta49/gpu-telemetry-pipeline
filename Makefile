@@ -4,8 +4,11 @@ NAMESPACE=gpu-telemetry
 
 .PHONY: test cover cover-html swagger build-binaries docker-build kind-load helm-install helm-uninstall lint clean
 
+# Only test internal packages for coverage, exclude cmd and generated pb
+PKG_LIST := $(shell go list ./... | grep -v /cmd/ | grep -v /pkg/pb)
+
 test:
-	go test ./... -coverprofile=coverage.out -covermode=atomic
+	go test $(PKG_LIST) -coverprofile=coverage.out -covermode=atomic
 
 cover: test
 	@go tool cover -func=coverage.out | grep total | awk '{print "Total coverage: " $$3}'
