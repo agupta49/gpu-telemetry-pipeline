@@ -1,18 +1,25 @@
 # **Elastic GPU Telemetry Pipeline**
 
-Elastic, scalable telemetry pipeline for AI clusters built in Golang. Ingests DCGM CSV streams, routes via custom gRPC message queue, persists to Postgres/TimescaleDB, and exposes REST APIs.
+Elastic, scalable telemetry pipeline for AI clusters built in Golang. Works on macOS, Linux, and EC2.
 
 ### **Why This Build Is Fast**
 
-We compile Go binaries on your host machine where Go build cache lives. Docker images just `COPY` the 5MB binary. This is 60x faster than compiling inside Docker.
+We cross-compile Go binaries on your host machine. Docker images just `COPY` the 5MB Linux binary. Works identically on macOS M1/M2/M3, Intel Mac, Linux, or Windows WSL.
 
 ### **Prerequisites**
+
+**macOS:**
+```bash
+brew install go docker kind helm kubectl
+```
+
+**Linux/RHEL/EC2:**
 ```bash
 bash scripts/install-prereqs.sh
 newgrp docker
 ```
 
-### **Quick Start - New Workflow**
+### **Quick Start - Works on macOS & Linux**
 ```bash
 # 1. Extract and setup
 unzip gpu-telemetry-pipeline.zip
@@ -22,10 +29,10 @@ go mod tidy
 # 2. Add your DCGM CSV
 cp /path/to/dcgm_metrics_20250718_134233.csv data/
 
-# 3. Run tests
+# 3. Run tests - builds for your local OS
 make cover
 
-# 4. Build binaries on host - uses Go cache, ~10s total
+# 4. Build Linux binaries for Docker - cross-compiles on macOS automatically
 make build-binaries
 
 # 5. Build Docker images - instant, just copies binaries
@@ -43,27 +50,27 @@ kubectl get pods -n gpu-telemetry -w
 curl http://localhost:30080/healthz
 ```
 
-### **One-Liner**
-```bash
-make build-binaries && make docker-build && make kind-create && make kind-load && make helm-install
-```
+### **Key Commands**
 
-### **Make Targets**
 | Command | Description |
 | --- | --- |
-| `make build-binaries` | Compile all 4 Go services on host using cache. ~10s |
-| `make docker-build` | Build Docker images by copying binaries. ~2s |
+| `make build-binaries` | Cross-compile Linux/amd64 binaries. Works on macOS/Linux |
+| `make build-binaries-local` | Build for your local OS to test natively |
+| `make docker-build` | Build Docker images by copying Linux binaries |
 | `make build-all` | Does both above |
 | `make cover` | Run tests, fail if <80% coverage |
-| `make kind-create` | Create kind cluster |
-| `make kind-load` | Load images into kind |
-| `make helm-install` | Deploy Helm chart |
-| `make logs-streamer` | Tail streamer logs |
+
+### **macOS Specific Notes**
+
+1. **Docker Desktop required**: Install from docker.com. Start it before `make docker-build`
+2. **Cross-compilation is automatic**: `make build-binaries` sets `GOOS=linux GOARCH=amd64` so binaries work in k8s even on M1/M2/M3 Macs
+3. **Test locally**: Run `make build-binaries-local` to get `bin/streamer-darwin_arm64` you can run directly on Mac
+4. **Performance**: First build compiles deps ~2-3 min. Second build uses cache ~3s
 
 ### **Troubleshooting**
 
-**`go build` slow on host**: First run compiles deps, ~30s. Second run uses cache, ~2s. If still slow, your machine is underpowered.
+**`exec format error` in pod**: You ran `docker-build` without `build-binaries` first. Docker copied wrong arch. Fix: `make clean && make build-binaries && make docker-build`
 
-**`exec format error` in pod**: You built binaries for wrong OS. Run `file bin/streamer` - should say `ELF 64-bit LSB executable, x86-64`. If it says `Mach-O` or `PE32`, you didn't set `GOOS=linux GOARCH=amd64`.
+**Build slow on macOS**: First run compiles `grpc` + `golang.org/x/text` ~2 min. Second run uses `~/Library/Caches/go-build` ~3s. If still slow after second run, check `rm -rf vendor/`
 
-**Docker build slow**: You're using old Dockerfiles that compile inside Docker. Use `make build-binaries` first, then `make docker-build`. The new Dockerfiles only `COPY bin/streamer`.
+**`docker: command not found` on Mac**: Install Docker Desktop and start it. Check `docker ps` works

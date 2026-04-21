@@ -1,6 +1,10 @@
 #!/bin/bash
 set -e
-echo "=== Installing Prerequisites ==="
+echo "=== Installing Prerequisites for Linux/RHEL ==="
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    echo "On macOS, use: brew install go docker kind helm kubectl"
+    exit 1
+fi
 SUDO="sudo"; [ "$EUID" -eq 0 ] && SUDO=""
 $SUDO dnf update -y
 $SUDO dnf install -y golang docker

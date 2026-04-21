@@ -1,14 +1,13 @@
 #!/bin/bash
 set -e
-echo "=== Building binaries on host ==="
+echo "=== Building Linux binaries for Docker/k8s ==="
+echo "Host OS: $(go env GOOS)/$(go env GOARCH)"
+echo "Target: linux/amd64"
 mkdir -p bin
-echo "Building streamer..."
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o bin/streamer ./cmd/streamer
-echo "Building collector..."
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o bin/collector ./cmd/collector
-echo "Building mq..."
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o bin/mq ./cmd/mq
-echo "Building api-gateway..."
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o bin/api-gateway ./cmd/api-gateway
-echo "Done. ls -lh bin/"
+echo "Done. Verify they're Linux binaries:"
+file bin/streamer
 ls -lh bin/
